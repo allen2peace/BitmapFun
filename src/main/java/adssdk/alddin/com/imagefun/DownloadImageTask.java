@@ -4,7 +4,6 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.drawable.Drawable;
 import android.os.AsyncTask;
-import android.util.Log;
 import android.widget.ImageView;
 
 import java.io.BufferedInputStream;
@@ -22,14 +21,18 @@ import java.net.URL;
 public class DownloadImageTask extends AsyncTask<String, Integer, Bitmap> {
 
     private WeakReference<ImageView> imageViewWeakReference;
+    private LruCacheManager lruCacheManager;
+    private String imageUrl, position;
 
-    public DownloadImageTask(ImageView imageView) {
+    public DownloadImageTask(LruCacheManager lruCacheManager, ImageView imageView) {
         imageViewWeakReference = new WeakReference<ImageView>(imageView);
+        this.lruCacheManager = lruCacheManager;
     }
 
     @Override
     protected Bitmap doInBackground(String... strings) {
-
+        imageUrl = strings[0];
+        position = strings[1];
         return downloadBitmap(strings[0]);
     }
 
@@ -41,12 +44,13 @@ public class DownloadImageTask extends AsyncTask<String, Integer, Bitmap> {
         if (imageView != null) {
             imageView.setImageBitmap(bitmap);
         }
+        lruCacheManager.addBitmapToMemCache(bitmap, imageUrl + position);
     }
 
     @Override
     protected void onProgressUpdate(Integer... values) {
         super.onProgressUpdate(values);
-        Log.d("tag", "进度：" + values);
+//        Log.d("tag", "进度：" + values);
     }
 
     private ImageView getAttachedImageView() {
@@ -55,10 +59,10 @@ public class DownloadImageTask extends AsyncTask<String, Integer, Bitmap> {
         DownloadImageTask curTask = getCurDownloadTask(imageView);
 
         if (curTask == this) {
-            Log.d("tag", "curTask == this");
+//            Log.d("tag", "curTask == this");
             return imageView;
         } else {
-            Log.d("tag", "curTask 不等于 this");
+//            Log.d("tag", "curTask 不等于 this");
         }
         return null;
     }
@@ -118,7 +122,7 @@ public class DownloadImageTask extends AsyncTask<String, Integer, Bitmap> {
             while ((len = in.read(data)) != -1) {
                 total_length += len;
                 value = (int) ((total_length / (float) length) * 100);
-                Log.d("tag", "value= " + value);
+//                Log.d("tag", "value= " + value);
                 //调用update函数，更新进度
                 publishProgress(value);
             }

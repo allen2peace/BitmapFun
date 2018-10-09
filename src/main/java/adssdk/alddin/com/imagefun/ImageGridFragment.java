@@ -2,7 +2,6 @@ package adssdk.alddin.com.imagefun;
 
 import android.content.Context;
 import android.graphics.BitmapFactory;
-import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
@@ -23,11 +22,13 @@ import android.widget.ImageView;
 public class ImageGridFragment extends Fragment implements AdapterView.OnItemClickListener {
 
     ImageAdapter adapter;
+    LruCacheManager lruCacheManager;
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         adapter = new ImageAdapter(getActivity());
+        lruCacheManager = new LruCacheManager(getActivity());
     }
 
     @Nullable
@@ -84,12 +85,19 @@ public class ImageGridFragment extends Fragment implements AdapterView.OnItemCli
                 holder = (ViewHolder) convertView.getTag();
             }
 
-            Log.d("tag", "position= " + position);
-            DownloadImageTask task = new DownloadImageTask(holder.imageView);
-            holder.imageView.setImageDrawable(new AsynDrawable(getResources(),
-                    BitmapFactory.decodeResource(getResources(), R.mipmap.ic_launcher), task));
+//            Log.d("tag", "position= " + position);
 
-            task.execute(Images.imageThumbUrls[position]);
+            String thumbUrl = Images.imageThumbUrls[position];
+            if (lruCacheManager.getBitmapFromMemCache(thumbUrl + position) != null) {
+                Log.i("tag", "getView: Cache : " + position);
+                holder.imageView.setImageBitmap(lruCacheManager.getBitmapFromMemCache(thumbUrl + position));
+            } else {
+                Log.i("tag", "getView: DownLoad: " + position);
+                DownloadImageTask task = new DownloadImageTask(lruCacheManager, holder.imageView);
+                holder.imageView.setImageDrawable(new AsynDrawable(getResources(),
+                        BitmapFactory.decodeResource(getResources(), R.mipmap.ic_launcher), task));
+                task.execute(thumbUrl, position + "");
+            }
             return convertView;
         }
 
